@@ -160,8 +160,8 @@ class GameSocketService {
         console.log(task.type)
         if (task.type === 'gameGuru')
             this.tasks.find(t => t.id === task.id).isBlock = true
+        SendMessage.sendAll({action: 'tasks', tasks: this.tasks})
         currentTask.questions = await taskService.getQuestionByTaskId(currentTask.id)
-
         if(task.type === 'arText'){
             this.playTasks.push({
                 user,
@@ -204,7 +204,6 @@ class GameSocketService {
         userWs.forEach(uw=>{
             SendMessage.sendMessage(uw.ws, {action: 'choiceTask', optionTask: playTask, task: currentTask})
         })
-        SendMessage.sendAll({action: 'tasks', tasks: this.tasks})
     }
 
 //----------------упраление сокет-пользователями
