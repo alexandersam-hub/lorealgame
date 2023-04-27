@@ -20,7 +20,7 @@ app.use(
     cors({
     })
 );
-app.use(express.json({ limit: "50mb" }))
+app.use(express.json({ limit: "70mb" }))
 
 app.use('/api/task',TaskRouter )
 app.use('/api/user',UserRouter )
