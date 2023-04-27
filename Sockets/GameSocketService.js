@@ -21,22 +21,21 @@ class GameSocketService {
     adminsWs = []
 
     helps=[
+        'Необходимо добраться до кабинета транспортного отдела на первом этаже и попросить код у одного из сотрудников кабинета.',
+        'Следуй в кофетерий и по дороге найдешь тару по сбору пластика. Захвати с собой ненужный пластик с рабочего стола.',
+        'Ищи код в углу офиса на комоде около коллег, там тебя будет ждать сказочный персонаж нашего офиса.',
+        'Эти мусорные баки охраняют 6 прекрасных моделей с шикарными укладками.',
+        'На этаже рядом с постером девушки с ярким макияжем и зелеными тенями открываются дверцы, где лежат 2 огнетушителя.',
+        'Ресепшн IT отдела.',
+        'Около ткацкого станка.',
+        'Вход на парковку, около двери.',
+        'Код находится рядом с курьерским ресепшеном, на стеллаже с посылками.',
+        'Найди большой крем CeraVe.',
+        'Код находится рядом с местным скелетом Андрюшкой.',
+        'Тениссный стол в зоне для курения.',
+        'Стол рядом с настольным футболом.',
         'Доберитесь до 3 этажа и найдите код между Ждуном и шкафом с наградами.',
-            'Необходимо добраться до кабинета транспортного отдела на первом этаже и попросить код у одного из сотрудников кабинета.',
-            'Следуй в кофетерий и по дороге найдешь тару по сбору пластика. Захвати с собой ненужный пластик с рабочего стола.',
-            'Код находится на столе около Эйфелевой башни между микроволновками.',
-            'Код находится рядом с курьерским ресепшеном, на стеллаже с посылками.',
-            'Ищи код в углу офиса на комоде около коллег, там тебя будет ждать сказочный персонаж нашего офиса.',
-            'Эти мусорные баки охраняют 6 прекрасных моделей с шикарными укладками.',
-            'На этаже рядом с постером девушки с ярким макияжем и зелеными тенями открываются дверцы, где лежат 2 огнетушителя.',
-            'Стол рядом с настольным футболом.',
-            'Тениссный стол в зоне для курения.',
-            'Вход на парковку, около двери.',
-            'Ресепшн IT отдела.',
-            'Код находится рядом с местным скелетом Андрюшкой.',
-            'Около ткацкого станка.',
-            'Найди большой крем CeraVe.'
-
+        'Код находится на столе около Эйфелевой башни между микроволновками.',
     ]
 //{"answer":"life212"}
     worldsQr = [
@@ -63,15 +62,20 @@ class GameSocketService {
 
     ]
     arAdditionalSetting = {
-        hard: this.helps.filter((h,i)=>i<5),
-        middle: this.helps.filter((h,i)=>i<10),
-        lite: this.helps.filter((h,i)=>i<15),
-        time: {
-            hard: 5 * 60,
-            middle: 10 * 60,
-            lite: 20 * 60,
+        hard: this.helps.filter((h,i)=>i<6),
+        middle: this.helps.filter((h,i)=>i<9),
+        lite: this.helps.filter((h,i)=>i<13),
+        price:{
+            hard: 3,
+            middle: 2,
+            lite: 1,
         },
-        count: 10
+        time: {
+            hard: 30 * 60,
+            middle: 20 * 60,
+            lite: 10 * 60,
+        },
+        count: 15
     }
 
     constructor() {
@@ -157,10 +161,11 @@ class GameSocketService {
         const timeStart = this.currentTime
         const currentTask = {...this.tasks.find(t => t.id === task.id)}
         currentTask.timeStart = timeStart
-        console.log(task.type)
-        if (task.type === 'gameGuru')
+        if (task.type === 'gameGuru' || task.type === 'oneAnswer' || task.mark === 'sherlock') {
             this.tasks.find(t => t.id === task.id).isBlock = true
-        SendMessage.sendAll({action: 'tasks', tasks: this.tasks})
+            SendMessage.sendAll({action: 'tasks', tasks: this.tasks})
+        }
+
         currentTask.questions = await taskService.getQuestionByTaskId(currentTask.id)
         if(task.type === 'arText'){
             this.playTasks.push({
@@ -179,6 +184,7 @@ class GameSocketService {
             this.playTasks.push({
                 user,
                 userLocalId,
+                price: this.arAdditionalSetting.price[level],
                 score: 0,
                 task: task.id,
                 timeStart,
@@ -409,7 +415,7 @@ class GameSocketService {
                     const playTask = this.playTasks.find(pt => pt.user.id === user.id)
                     const ta = this.tasks.find(t => task.id === t.id)
                     playTask.count += 1
-                    playTask.score += ta.price
+                    playTask.score += playTask.price
                     playTask.wordsQr = playTask.wordsQr.filter(p => p !== answer)
                     if (playTask.wordsQr.length === 0) {
                         const finishT = {user, task: playTask.task, status: 'win', score: playTask.score}
@@ -441,7 +447,6 @@ class GameSocketService {
                         const status = currentTask.score > 0 ? 'win' : 'last'
                         const addScore = currentTask.score
                         currentScore.score += addScore
-                        console.log('addScore', addScore)
                         if (addScore > 0)
                             currentScore.win += 1
                         else
@@ -449,12 +454,16 @@ class GameSocketService {
                         this.finishTasks.push({user: user, task: task.id, status, score: addScore})
                         SendMessage.sendAdmins({action: 'score', score: this.scores, finishTask: this.finishTasks})
                         userWs.forEach(uw=>{
-                            SendMessage.sendMessage(ws, {
+                            SendMessage.sendMessage(uw.ws, {
                                 action: 'reportTask', status,
                                 scoreAdd: addScore, task, score: currentScore,
                                 finishTask: this.finishTasks.filter(ft => ft.user.id === user.id)
                             })
                         })
+                        if (taskR.isBlock) {
+                            taskR.isBlock = false
+                            SendMessage.sendAll({action: 'tasks', tasks: this.tasks})
+                        }
                     } else {
                         if (answer.isWin) {
                             currentTask.score += taskR.price
@@ -533,6 +542,7 @@ class GameSocketService {
             currentTime:this.currentTime,
             playTasks:this.playTasks,
             finishTasks:this.finishTasks,
+            scores:this.scores,
         })
     }
 
@@ -545,6 +555,7 @@ class GameSocketService {
         this.currentTime=p.currentTime
         this.playTasks=p.playTasks
         this.finishTasks=p.finishTasks
+        this.scores=p.scores
         return true
     }
     async removeProgress(){

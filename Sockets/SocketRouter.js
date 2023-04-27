@@ -47,7 +47,7 @@ class SocketRouter{
                             break
 
                         case 'pullAnswer':
-                            console.log(data.answer)
+                            // console.log(data.answer)
                             GameSocketService.pullAnswer(ws, user, data.task, data.answer.type, data.answer.score, data.answer.answer )
                             break
                         case 'pullScore':
